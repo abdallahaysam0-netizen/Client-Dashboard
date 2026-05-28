@@ -24,12 +24,19 @@ export const useClients = () => {
 
     const fetchClients = async () => {
         setLoading(true);
+        const token = localStorage.getItem('token');
         try {
-            const res = await fetch(`${API_BASE_URL}/clients`);
+            const res = await fetch(`${API_BASE_URL}/clients`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
             const data = await res.json();
-            setClients(data);
+            setClients(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Error fetching clients:", error);
+            setClients([]);
         } finally {
             setLoading(false);
         }

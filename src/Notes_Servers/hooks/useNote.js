@@ -16,18 +16,23 @@ export const useNote = () => {
 
     const fetchData = async () => {
         setLoading(true);
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+        };
         try {
-            const notesRes = await fetch(`${API_BASE_URL}/notes`);
-            if (!notesRes.ok) throw new Error('Failed to fetch notes');
+            const notesRes = await fetch(`${API_BASE_URL}/notes`, { headers });
             const notesData = await notesRes.json();
-            setNotes(notesData);
+            setNotes(Array.isArray(notesData) ? notesData : []);
             
-            const clientsRes = await fetch(`${API_BASE_URL}/clients`);
-            if (!clientsRes.ok) throw new Error('Failed to fetch clients');
+            const clientsRes = await fetch(`${API_BASE_URL}/clients`, { headers });
             const clientsData = await clientsRes.json();
-            setClients(clientsData);
+            setClients(Array.isArray(clientsData) ? clientsData : []);
         } catch (error) {
             console.error("Error fetching data:", error);
+            setNotes([]);
+            setClients([]);
         } finally {
             setLoading(false);
         }
@@ -49,7 +54,11 @@ export const useNote = () => {
         try {
             const res = await fetch(`${API_BASE_URL}/notes`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify(formData)
             });
             if (res.ok) {
@@ -91,7 +100,11 @@ export const useNote = () => {
         try {
             const res = await fetch(`${API_BASE_URL}/notes/${selectedNote.id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Accept': 'application/json'
+                },
                 body: JSON.stringify(formData)
             });
             if (res.ok) {

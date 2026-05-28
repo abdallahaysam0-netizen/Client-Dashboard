@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
-const EditAttachmentModel = ({ isOpen, onClose, editForm, setEditForm, clients, fetchAttachments, id }) => {
+const EditAttachmentModel = ({ isOpen, onClose, editForm, setEditForm, clients, fetchAttachments, id, selectedAttachment }) => {
     const [error, setError] = useState('');
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 
@@ -15,10 +15,11 @@ const EditAttachmentModel = ({ isOpen, onClose, editForm, setEditForm, clients, 
     }, [isOpen, editForm.file]);
 
     if (!isOpen) return null;
-    
+
     const handleInternalClose = () => {
         setError('');
         onClose();
+
     };
 
     const handleEditAttachment = async (e) => {
@@ -30,21 +31,32 @@ const EditAttachmentModel = ({ isOpen, onClose, editForm, setEditForm, clients, 
             return;
         }
 
+
+
+        const isUnchanged =
+            String(editForm.client_id) === String(selectedAttachment?.client_id) &&
+            (typeof editForm.file === 'string' || editForm.file === null);
+
+        if (isUnchanged) {
+            setError('لم تقم بإجراء أي تعديلات');
+            toast.error('لم تقم بإجراء أي تعديلات');
+            return;
+        }
+
         try {
             const data = new FormData();
             data.append('client_id', editForm.client_id);
-            
+
             // Only append file if a new one is selected
             if (editForm.file && typeof editForm.file !== 'string') {
                 data.append('file', editForm.file);
             }
-            
-            data.append('status', editForm.status);
+
             data.append('_method', 'PUT'); // Necessary for Laravel to handle multipart/form-data via POST as PUT
 
             const res = await fetch(`${API_BASE_URL}/attachments/${id}`, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`,
                     'Accept': 'application/json'
                 },
@@ -99,8 +111,8 @@ const EditAttachmentModel = ({ isOpen, onClose, editForm, setEditForm, clients, 
                     )}
                     <div className='space-y-2'>
                         <label className='block font-black text-gray-700 dark:text-slate-300 mr-2'>اسم العميل</label>
-                        <select 
-                            value={editForm.client_id || ''} 
+                        <select
+                            value={editForm.client_id || ''}
                             onChange={(e) => setEditForm({ ...editForm, client_id: e.target.value })}
                             className="w-full px-5 py-4 bg-gray-50 dark:bg-slate-900 border-2 border-transparent dark:border-slate-800 rounded-2xl focus:border-indigo-500 dark:focus:border-indigo-600 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none font-bold text-gray-700 dark:text-slate-200"
                         >
@@ -116,8 +128,8 @@ const EditAttachmentModel = ({ isOpen, onClose, editForm, setEditForm, clients, 
                         {fileType === 'image' && (
                             <div className='space-y-2'>
                                 <label className='block font-black text-gray-700 dark:text-indigo-400 mr-2 text-indigo-700'>تغيير الصورة الشخصية (Image)</label>
-                                <input 
-                                    type="file" 
+                                <input
+                                    type="file"
                                     accept="image/*"
                                     className='w-full px-6 py-4 bg-indigo-50/50 dark:bg-indigo-900/10 border-2 border-dashed border-indigo-200 dark:border-indigo-900/30 rounded-2xl focus:border-indigo-500 dark:focus:border-indigo-600 outline-none font-bold transition-all text-gray-700 dark:text-slate-200'
                                     onChange={(e) => setEditForm({ ...editForm, file: e.target.files[0] })}
@@ -132,8 +144,8 @@ const EditAttachmentModel = ({ isOpen, onClose, editForm, setEditForm, clients, 
                         {fileType === 'pdf' && (
                             <div className='space-y-2'>
                                 <label className='block font-black text-gray-700 dark:text-red-400 mr-2 text-red-700'>تغيير ملف السيرة الذاتية (CV)</label>
-                                <input 
-                                    type="file" 
+                                <input
+                                    type="file"
                                     accept=".pdf"
                                     className='w-full px-6 py-4 bg-red-50/50 dark:bg-red-900/10 border-2 border-dashed border-red-200 dark:border-red-900/30 rounded-2xl focus:border-red-500 dark:focus:border-red-600 outline-none font-bold transition-all text-gray-700 dark:text-slate-200'
                                     onChange={(e) => setEditForm({ ...editForm, file: e.target.files[0] })}
@@ -145,21 +157,10 @@ const EditAttachmentModel = ({ isOpen, onClose, editForm, setEditForm, clients, 
                         )}
                     </div>
 
-                    <div className='space-y-2'>
-                        <label className='block font-black text-gray-700 dark:text-slate-300 mr-2'>حالة المرفق</label>
-                        <select 
-                            value={editForm.status || 'pending'} 
-                            onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} 
-                            className='w-full px-6 py-4 bg-gray-50 dark:bg-slate-900 border-2 border-transparent dark:border-slate-800 rounded-2xl focus:border-indigo-500 dark:focus:border-indigo-600 outline-none font-bold transition-all text-gray-700 dark:text-slate-200'
-                        >
-                            <option value="pending" className="dark:bg-slate-900">قيد الانتظار</option>
-                            <option value="done" className="dark:bg-slate-900">تم التنفيذ</option>
-                            <option value="cancelled" className="dark:bg-slate-900">إلغاء</option>
-                        </select>
-                    </div>
+
 
                     <div className="flex flex-col gap-3 pt-4">
-                        <button type='submit' className='w-full py-5 bg-indigo-600 dark:bg-indigo-700 text-white rounded-2xl font-black text-lg shadow-xl shadow-indigo-200 dark:shadow-indigo-900/20 hover:bg-indigo-700 transition-all hover:scale-[1.02] active:scale-95'>
+                        <button type='submit' onClick={handleEditAttachment} className='w-full py-5 bg-indigo-600 dark:bg-indigo-700 text-white rounded-2xl font-black text-lg shadow-xl shadow-indigo-200 dark:shadow-indigo-900/20 hover:bg-indigo-700 transition-all hover:scale-[1.02] active:scale-95'>
                             حفظ التعديلات
                         </button>
                         <button type='button' onClick={handleInternalClose} className='w-full py-5 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400 rounded-2xl font-black text-lg hover:bg-gray-200 dark:hover:bg-slate-700 transition-all'>

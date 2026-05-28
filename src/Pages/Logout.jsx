@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const Logout = ({ setIsLoggedIn }) => {
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+    const navigate = useNavigate();
 
     useEffect(() => {
         const performLogout = async () => {
@@ -27,11 +29,12 @@ const Logout = ({ setIsLoggedIn }) => {
                 localStorage.removeItem('user');
                 localStorage.removeItem('activePage'); // إعادة تعيين الصفحة النشطة
                 setIsLoggedIn(false);
+                navigate('/login', { replace: true });
             }
         };
 
         performLogout();
-    }, [setIsLoggedIn, API_BASE_URL]);
+    }, [setIsLoggedIn, API_BASE_URL, navigate]);
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-transparent transition-colors duration-500 overflow-hidden" dir="rtl">

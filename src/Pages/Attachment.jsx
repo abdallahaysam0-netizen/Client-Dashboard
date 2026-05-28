@@ -21,10 +21,12 @@ const Attachment = () => {
         addForm,
         setAddForm,
         handleDelete,
+        handleDeleteAll,
         handleEdit,
         handleView,
         fetchAttachments,
         filteredAttachments,
+        groupedAttachments,
         clients
     } = useAttachment();
 
@@ -96,26 +98,16 @@ const Attachment = () => {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                                {Object.values(filteredAttachments.reduce((acc, attachment) => {
-                                    const clientId = attachment.client_id;
-                                    if (!acc[clientId]) acc[clientId] = { client_id: clientId, images: [], pdfs: [] };
-                                    if (attachment.file_path?.toLowerCase().endsWith('.pdf')) {
-                                        acc[clientId].pdfs.push(attachment);
-                                    } else {
-                                        acc[clientId].images.push(attachment);
-                                    }
-                                    return acc;
-                                }, {})).map((group) => {
-                                    const client = clients.find(c => c.id === group.client_id);
+                                {groupedAttachments.map((group) => {
                                     return (
                                         <tr key={group.client_id} className="hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10 transition-all duration-300 group">
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-100 dark:shadow-indigo-900/20 group-hover:scale-110 transition-transform">
-                                                        {client?.name?.charAt(0) || '?'}
+                                                        {group.client?.name?.charAt(0) || '?'}
                                                     </div>
                                                     <div>
-                                                        <div className="text-gray-900 dark:text-slate-200 font-bold text-lg">{client?.name || 'عميل غير معروف'}</div>
+                                                        <div className="text-gray-900 dark:text-slate-200 font-bold text-lg">{group.client?.name || 'عميل غير معروف'}</div>
                                                         <div className="text-gray-400 dark:text-slate-500 text-xs font-bold mt-0.5 tracking-tighter uppercase">ID: #{group.client_id}</div>
                                                     </div>
                                                 </div>
@@ -259,6 +251,7 @@ const Attachment = () => {
                 clients={clients}
                 fetchAttachments={fetchAttachments}
                 id={selectedAttachment?.id}
+                selectedAttachment={selectedAttachment}
             />
 
             <ViewAttachmentModel

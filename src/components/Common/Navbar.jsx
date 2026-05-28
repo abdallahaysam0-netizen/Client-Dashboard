@@ -1,8 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import echo from '../../echo';
 import { toast } from 'react-hot-toast';
+import { NavLink, useNavigate } from 'react-router-dom';
 
-const Navbar = ({ currentPage, setCurrentPage, setIsLoggedIn, isDark, toggleDarkMode, isAuthPage }) => {
+// Define preloading logic to be triggered on hover for "Instant" feel
+const preloadDashboard = () => import('../../Pages/AdminDashboard');
+const preloadClients = () => import('../../Pages/Clients');
+const preloadNotes = () => import('../../Pages/Notes');
+const preloadAttachments = () => import('../../Pages/Attachment');
+const preloadAuditLog = () => import('../../Pages/Audit log');
+
+const Navbar = ({ setIsLoggedIn, isDark, toggleDarkMode, isAuthPage }) => {
+    const navigate = useNavigate();
     const [notifications, setNotifications] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -40,44 +48,57 @@ const Navbar = ({ currentPage, setCurrentPage, setIsLoggedIn, isDark, toggleDark
         if (!isAuthPage) {
             fetchNotifications();
 
-            const channel = echo.private(`App.Models.User.${JSON.parse(atob(localStorage.getItem('token').split('.')[1])).sub}`);
-            
-            const handleNotification = (e) => {
-                const newNotif = {
-                    id: e.id,
-                    type: e.data.type,
-                    title: e.data.title,
-                    message: e.data.message,
-                    time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-                    read: false
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            let cleanup = null;
+
+            // Import echo dynamically to keep it out of the initial bundle
+            import('../../echo').then(({ default: echo }) => {
+                const userData = JSON.parse(atob(token.split('.')[1]));
+                const channel = echo.private(`App.Models.User.${userData.sub}`);
+                
+                const handleNotification = (e) => {
+                    const newNotif = {
+                        id: e.id,
+                        type: e.data.type,
+                        title: e.data.title,
+                        message: e.data.message,
+                        time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+                        read: false
+                    };
+                    setNotifications(prev => [newNotif, ...prev].slice(0, 10));
+                    setUnreadCount(prev => prev + 1);
                 };
-                setNotifications(prev => [newNotif, ...prev].slice(0, 10));
-                setUnreadCount(prev => prev + 1);
-            };
 
-            const addNotification = (data) => {
-                const newNotif = {
-                    id: Date.now(),
-                    type: data.type,
-                    title: data.title,
-                    message: data.message,
-                    time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
-                    read: false
+                const addNotification = (data) => {
+                    const newNotif = {
+                        id: Date.now(),
+                        type: data.type,
+                        title: data.title,
+                        message: data.message,
+                        time: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }),
+                        read: false
+                    };
+                    setNotifications(prev => [newNotif, ...prev].slice(0, 10));
+                    setUnreadCount(prev => prev + 1);
                 };
-                setNotifications(prev => [newNotif, ...prev].slice(0, 10));
-                setUnreadCount(prev => prev + 1);
-            };
 
-            const handleLocalNotification = (e) => {
-                addNotification(e.detail);
-            };
+                const handleLocalNotification = (e) => {
+                    addNotification(e.detail);
+                };
 
-            window.addEventListener('local-notification', handleLocalNotification);
-            channel.notification(handleNotification);
+                window.addEventListener('local-notification', handleLocalNotification);
+                channel.notification(handleNotification);
+
+                cleanup = () => {
+                    window.removeEventListener('local-notification', handleLocalNotification);
+                    echo.leave(`App.Models.User.${userData.sub}`);
+                };
+            }).catch(err => console.error('Navbar Echo initialization failed:', err));
 
             return () => {
-                window.removeEventListener('local-notification', handleLocalNotification);
-                echo.leave(`App.Models.User.${JSON.parse(atob(localStorage.getItem('token').split('.')[1])).sub}`);
+                if (cleanup) cleanup();
             };
         }
     }, [isAuthPage]);
@@ -108,6 +129,19 @@ const Navbar = ({ currentPage, setCurrentPage, setIsLoggedIn, isDark, toggleDark
             console.error('Error marking notifications read:', error);
         }
     };
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const permissions = user.permissions || [];
+    const roles = user.roles || [];
+
+    const hasPermission = (permission) => permissions.includes(permission) || roles.includes('Admin');
+
+    const navLinkClass = ({ isActive }) => 
+        `font-bold px-5 py-2.5 rounded-xl transition-all duration-300 flex items-center gap-2 ${
+            isActive
+            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm border border-indigo-100 dark:border-indigo-800'
+            : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800'
+        }`;
+
     return (
         <nav className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 px-8 py-4 flex gap-6 items-center sticky top-0 z-50 shadow-sm transition-colors duration-300" dir="rtl">
             <div className="flex items-center gap-8">
@@ -133,56 +167,78 @@ const Navbar = ({ currentPage, setCurrentPage, setIsLoggedIn, isDark, toggleDark
 
                 {!isAuthPage && (
                     <div className="flex gap-2">
-                        <button
-                            onClick={() => setCurrentPage('dashboard')}
-                            className={`font-bold px-5 py-2.5 rounded-xl transition-all duration-300 flex items-center gap-2 ${currentPage === 'dashboard'
-                                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm border border-indigo-100 dark:border-indigo-800'
-                                : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800'
-                                }`}
+                        <NavLink
+                            to="/"
+                            onMouseEnter={preloadDashboard}
+                            className={navLinkClass}
                         >
-                            <span className={`w-2 h-2 rounded-full ${currentPage === 'dashboard' ? 'bg-indigo-600 animate-pulse' : 'bg-transparent'}`}></span>
-                            لوحة التحكم
-                        </button>
-                        <button
-                            onClick={() => setCurrentPage('clients')}
-                            className={`font-bold px-5 py-2.5 rounded-xl transition-all duration-300 flex items-center gap-2 ${currentPage === 'clients'
-                                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm border border-indigo-100 dark:border-indigo-800'
-                                : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800'
-                                }`}
-                        >
-                            <span className={`w-2 h-2 rounded-full ${currentPage === 'clients' ? 'bg-indigo-600 animate-pulse' : 'bg-transparent'}`}></span>
-                            إدارة العملاء
-                        </button>
-                        <button
-                            onClick={() => setCurrentPage('notes')}
-                            className={`font-bold px-5 py-2.5 rounded-xl transition-all duration-300 flex items-center gap-2 ${currentPage === 'notes'
-                                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm border border-indigo-100 dark:border-indigo-800'
-                                : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800'
-                                }`}
-                        >
-                            <span className={`w-2 h-2 rounded-full ${currentPage === 'notes' ? 'bg-indigo-600 animate-pulse' : 'bg-transparent'}`}></span>
-                            إدارة الملاحظات
-                        </button>
-                        <button
-                            onClick={() => setCurrentPage('attachments')}
-                            className={`font-bold px-5 py-2.5 rounded-xl transition-all duration-300 flex items-center gap-2 ${currentPage === 'attachments'
-                                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm border border-indigo-100 dark:border-indigo-800'
-                                : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800'
-                                }`}
-                        >
-                            <span className={`w-2 h-2 rounded-full ${currentPage === 'attachments' ? 'bg-indigo-600 animate-pulse' : 'bg-transparent'}`}></span>
-                            إدارة المرفقات
-                        </button>
-                        <button
-                            onClick={() => setCurrentPage('audit-log')}
-                            className={`font-bold px-5 py-2.5 rounded-xl transition-all duration-300 flex items-center gap-2 ${currentPage === 'audit-log'
-                                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 shadow-sm border border-indigo-100 dark:border-indigo-800'
-                                : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800'
-                                }`}
-                        >
-                            <span className={`w-2 h-2 rounded-full ${currentPage === 'audit-log' ? 'bg-indigo-600 animate-pulse' : 'bg-transparent'}`}></span>
-                            سجل المراجعة
-                        </button>
+                            {({ isActive }) => (
+                                <>
+                                    <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-indigo-600 animate-pulse' : 'bg-transparent'}`}></span>
+                                    لوحة التحكم
+                                </>
+                            )}
+                        </NavLink>
+
+                        {hasPermission('view-clients') && (
+                            <NavLink
+                                to="/clients"
+                                onMouseEnter={preloadClients}
+                                className={navLinkClass}
+                            >
+                                {({ isActive }) => (
+                                    <>
+                                        <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-indigo-600 animate-pulse' : 'bg-transparent'}`}></span>
+                                        إدارة العملاء
+                                    </>
+                                )}
+                            </NavLink>
+                        )}
+
+                        {hasPermission('view-notes') && (
+                            <NavLink
+                                to="/notes"
+                                onMouseEnter={preloadNotes}
+                                className={navLinkClass}
+                            >
+                                {({ isActive }) => (
+                                    <>
+                                        <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-indigo-600 animate-pulse' : 'bg-transparent'}`}></span>
+                                        إدارة الملاحظات
+                                    </>
+                                )}
+                            </NavLink>
+                        )}
+
+                        {hasPermission('view-attachments') && (
+                            <NavLink
+                                to="/attachments"
+                                onMouseEnter={preloadAttachments}
+                                className={navLinkClass}
+                            >
+                                {({ isActive }) => (
+                                    <>
+                                        <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-indigo-600 animate-pulse' : 'bg-transparent'}`}></span>
+                                        إدارة المرفقات
+                                    </>
+                                )}
+                            </NavLink>
+                        )}
+
+                        {hasPermission('view-activity-logs') && (
+                            <NavLink
+                                to="/audit-log"
+                                onMouseEnter={preloadAuditLog}
+                                className={navLinkClass}
+                            >
+                                {({ isActive }) => (
+                                    <>
+                                        <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-indigo-600 animate-pulse' : 'bg-transparent'}`}></span>
+                                        سجل المراجعة
+                                    </>
+                                )}
+                            </NavLink>
+                        )}
                     </div>
                 )}
             </div>
@@ -295,8 +351,8 @@ const Navbar = ({ currentPage, setCurrentPage, setIsLoggedIn, isDark, toggleDark
                 {!isAuthPage && (
                     <>
                         <div className="flex flex-col text-left items-end">
-                            <span className="text-sm font-bold text-gray-900 dark:text-slate-100 leading-none">المسؤول</span>
-                            <span className="text-[10px] font-medium text-green-500">متصل الآن</span>
+                            <span className="text-sm font-bold text-gray-900 dark:text-slate-100 leading-none">{user.name}</span>
+                            <span className="text-[10px] font-medium text-green-500">{roles.join(', ') || 'مستخدم'}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <div className="w-10 h-10 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors group relative">
@@ -304,7 +360,7 @@ const Navbar = ({ currentPage, setCurrentPage, setIsLoggedIn, isDark, toggleDark
                             </div>
                             <button
                                 onClick={() => {
-                                    setCurrentPage('logout');
+                                    navigate('/logout');
                                 }}
                                 className="w-10 h-10 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors text-red-500 dark:text-red-400"
                                 title="تسجيل الخروج"

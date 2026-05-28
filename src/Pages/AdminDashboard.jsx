@@ -98,19 +98,30 @@ const AdminDashboard = () => {
 
     const fetchData = async () => {
         setLoading(true);
-        try {
-            // Fetch clients
-            const clientsRes = await fetch(`${API_BASE_URL}/clients`);
-            const clientsData = await clientsRes.json();
-            setClients(clientsData);
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+        };
 
-            // Fetch backend stats
-            const statsRes = await fetch(`${API_BASE_URL}/dashboard/stats`);
-            if (statsRes.ok) {
+        try {
+            // Start all requests in parallel
+            const [clientsRes, statsRes, activitiesRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/clients`, { headers }),
+                fetch(`${API_BASE_URL}/dashboard/stats`, { headers }),
+                fetch(`${API_BASE_URL}/activities`, { headers }).catch(() => null) // Optional
+            ]);
+
+            // Process clients
+            const clientsData = await clientsRes.json();
+            setClients(Array.isArray(clientsData) ? clientsData : []);
+
+            // Process stats
+            if (statsRes && statsRes.ok) {
                 const backendStats = await statsRes.json();
                 setStats({
                     totalClients: backendStats.total_clients,
-                    activeClients: backendStats.client_status.find(s => s.name === 'Active')?.value || 0,
+                    activeClients: backendStats.client_status?.find(s => s.name === 'Active')?.value || 0,
                     totalNotes: backendStats.total_notes,
                     totalAttachments: backendStats.total_attachments,
                     monthlyData: backendStats.monthly_data,
@@ -118,62 +129,45 @@ const AdminDashboard = () => {
                     completionRate: backendStats.completion_rate
                 });
             } else {
-                // Fallback to manual calculation if endpoint missing
-                const clientsRes = await fetch(`${API_BASE_URL}/clients`);
-                const clientsData = await clientsRes.json();
-                const notesRes = await fetch(`${API_BASE_URL}/notes`);
-                const notesData = await notesRes.json();
-                const attachmentsRes = await fetch(`${API_BASE_URL}/attachments`);
-                const attachmentsData = await attachmentsRes.json();
+                // Fallback: manually fetch notes/attachments if stats endpoint fails
+                const [notesRes, attachmentsRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/notes`, { headers }),
+                    fetch(`${API_BASE_URL}/attachments`, { headers })
+                ]);
+                const [notesData, attachmentsData] = await Promise.all([
+                    notesRes.json(),
+                    attachmentsRes.json()
+                ]);
 
                 setStats({
-                    totalClients: clientsData.length,
-                    activeClients: clientsData.filter(c => c.status === 'active').length,
-                    totalNotes: notesData.length,
-                    totalAttachments: attachmentsData.length,
+                    totalClients: Array.isArray(clientsData) ? clientsData.length : 0,
+                    activeClients: Array.isArray(clientsData) ? clientsData.filter(c => c.status === 'active').length : 0,
+                    totalNotes: Array.isArray(notesData) ? notesData.length : 0,
+                    totalAttachments: Array.isArray(attachmentsData) ? attachmentsData.length : 0,
                     monthlyData: [],
                     statusData: []
                 });
             }
 
-            // Fetch activities (Dynamic connection)
-            try {
-                const activitiesRes = await fetch(`${API_BASE_URL}/activities`);
-                if (activitiesRes.ok) {
-                    const activitiesData = await activitiesRes.json();
-                    setActivities(activitiesData);
-                } else {
-                    // Fallback mock data if endpoint doesn't exist
-                    setActivities([
-                        { id: 1, color: 'bg-green-500', title: 'تمت إضافة عميل جديد لقاعدة البيانات', time: 'منذ 5 دقائق', type: 'success' },
-                        { id: 2, color: 'bg-amber-500', title: 'تحذير: ضغط مرتفع على خادم التخزين', time: 'منذ ساعتين', type: 'warning' },
-                        { id: 3, color: 'bg-indigo-500', title: 'اكتمال النسخ الاحتياطي الدوري', time: 'منذ 4 ساعات', type: 'info' },
-                    ]);
-                }
-            } catch (err) {
-                // Keep fallback mock data
+            // Process activities
+            if (activitiesRes && activitiesRes.ok) {
+                const activitiesData = await activitiesRes.json();
+                setActivities(Array.isArray(activitiesData) ? activitiesData : []);
+            } else {
+                setActivities([
+                    { id: 1, color: 'bg-green-500', title: 'تمت إضافة عميل جديد للقاعدة', time: 'منذ قليل', type: 'success' },
+                ]);
             }
 
-            // Fetch system health (Simulation or real)
+            // Fetch system health
             try {
-                const healthRes = await fetch(`${API_BASE_URL}/system/health`);
+                const healthRes = await fetch(`${API_BASE_URL}/system/health`, { headers });
                 if (healthRes.ok) {
                     const healthData = await healthRes.json();
                     setSystemHealth(healthData);
-                } else {
-                    // Slight variation for dynamic feel
-                    setSystemHealth(prev => ({
-                        ...prev,
-                        cpuLoad: Math.floor(Math.random() * 20) + 30,
-                        ramUsed: (Math.random() * 2 + 5).toFixed(1)
-                    }));
                 }
             } catch (err) {
-                setSystemHealth(prev => ({
-                    ...prev,
-                    cpuLoad: Math.floor(Math.random() * 20) + 30,
-                    ramUsed: (Math.random() * 2 + 5).toFixed(1)
-                }));
+                // Keep default health
             }
         } catch (error) {
             console.error("Error fetching data:", error);
@@ -213,12 +207,20 @@ const AdminDashboard = () => {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen bg-slate-50 dark:bg-[#0f172a] transition-all duration-500">
-                <div className="relative w-24 h-24">
-                    <div className="absolute inset-0 rounded-full border-t-4 border-b-4 border-indigo-600 dark:border-cyan-500 animate-spin"></div>
-                    <div className="absolute inset-2 rounded-full border-r-4 border-l-4 border-indigo-400 dark:border-blue-400 animate-reverse-spin"></div>
+            <div className="p-8 bg-transparent min-h-screen animate-pulse" dir="rtl">
+                <div className="flex flex-col lg:flex-row justify-between mb-16 gap-8">
+                    <div className="space-y-4">
+                        <div className="h-4 w-32 bg-gray-200 dark:bg-slate-800 rounded-full"></div>
+                        <div className="h-10 w-64 bg-gray-200 dark:bg-slate-800 rounded-2xl"></div>
+                        <div className="h-4 w-96 bg-gray-200 dark:bg-slate-800 rounded-full"></div>
+                    </div>
                 </div>
-                <span className="mt-8 text-indigo-700 dark:text-cyan-400 font-black tracking-widest animate-pulse">جاري تحضير البيانات...</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="h-40 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-gray-100 dark:border-slate-800 shadow-sm"></div>
+                    ))}
+                </div>
+                <div className="h-[400px] bg-white dark:bg-slate-900 rounded-[3.5rem] border border-gray-100 dark:border-slate-800 shadow-sm"></div>
             </div>
         );
     }
@@ -273,7 +275,7 @@ const AdminDashboard = () => {
 
             {/* Futuristic Data Visualization Section */}
             <div className="relative z-10 bg-transparent rounded-[3.5rem] p-12 text-white mb-16 shadow-[0_50px_100px_rgba(15,23,42,0.3)] overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-full mix-blend-overlay opacity-20 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')]"></div>
+                <div className="absolute top-0 left-0 w-full h-full mix-blend-overlay opacity-10 bg-[radial-gradient(circle_at_25%_25%,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[length:20px_20px]"></div>
                 <div className="absolute top-[-20%] right-[-10%] w-[50%] h-[80%] bg-indigo-500/10 rounded-full blur-[120px]"></div>
 
                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center mb-16 gap-8">
@@ -387,7 +389,7 @@ const AdminDashboard = () => {
 
                 {/* Performance / Completion Drop */}
                 <div className="bg-transparent rounded-[3rem] p-10 text-white shadow-2xl shadow-blue-900/50 flex flex-col justify-between overflow-hidden relative group border border-blue-500/10">
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+                    <div className="absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[length:4px_4px] opacity-30"></div>
                     <div className="absolute -right-20 -top-20 w-80 h-80 bg-cyan-500/10 rounded-full blur-[100px] group-hover:bg-blue-500/10 transition-all duration-1000"></div>
 
                     <div className="relative z-10">

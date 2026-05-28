@@ -1,16 +1,48 @@
-# React + Vite
+# Client Management Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, high-performance dashboard for managing clients, servers, and attachments. Built with **React 19**, **Vite**, and **Tailwind CSS**, featuring real-time connectivity with **Laravel Reverb**.
 
-Currently, two official plugins are available:
+## 🚀 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Real-time Updates**: Integrated with Laravel Echo and Reverb for instant data synchronization.
+- **Client Management**: Full CRUD operations for managing client data.
+- **Server Monitoring**: Track and manage server attachments and statuses.
+- **Modern UI/UX**: Built with Tailwind CSS for a responsive, dark-mode-ready, and sleek interface.
+- **Secure Architecture**: Environment-based configuration and protected routing.
+- **Modular Codebase**: Organized using hooks and reusable components for maximum maintainability.
 
-## React Compiler
+## 🛠️ Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend**: React 19, Vite
+- **Styling**: Tailwind CSS
+- **State/Routing**: React Router 7
+- **Real-time**: Laravel Echo, Pusher-js
+- **Notifications**: React Hot Toast
 
-## Expanding the ESLint configuration
+## 📦 Installation
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-username/client-dashboard.git
+   cd client-dashboard
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables**:
+   Copy `.env.example` to `.env` and update the values:
+   ```bash
+   cp .env.example .env
+   ```
+
+4. **Run development server**:
+   ```bash
+   npm run dev
+   ```
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

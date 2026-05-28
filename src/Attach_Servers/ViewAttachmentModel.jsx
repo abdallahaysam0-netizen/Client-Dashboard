@@ -47,7 +47,13 @@ const ViewAttachmentModel = ({ isOpen, onClose, attachment, clientName }) => {
         setPdfError(false);
         setPdfBlobUrl(null);
 
-        fetch(`${API_BASE_URL}/attachments/${attachment.id}/base64`)
+        const token = localStorage.getItem('token');
+        fetch(`${API_BASE_URL}/attachments/${attachment.id}/base64`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json'
+            }
+        })
             .then(res => {
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 return res.json();

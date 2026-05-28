@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const Login = ({ setIsLoggedIn, onSwitchToRegister }) => {
+const Login = ({ setIsLoggedIn }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -34,8 +34,7 @@ const Login = ({ setIsLoggedIn, onSwitchToRegister }) => {
             } else {
                 if (data.errors) {
                     setFieldErrors(data.errors);
-                    // Get the first error message to show in the main error box if needed
-                    setError(data.message || 'حدث خطأ في البيانات المدخلة');
+                    setError(data.message || 'يرجى مراجعة الحقول الحمراء');
                 } else {
                     setError(data.message || 'حدث خطأ في تسجيل الدخول. يرجى التحقق من بياناتك.');
                 }
@@ -53,11 +52,11 @@ const Login = ({ setIsLoggedIn, onSwitchToRegister }) => {
             {/* Artistic Background Elements */}
             <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-600/20 rounded-full blur-[120px] animate-pulse"></div>
             <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-cyan-600/20 rounded-full blur-[120px]"></div>
-            
+
             <div className="relative z-10 w-full max-w-md p-4 animate-in">
                 <div className="bg-white dark:bg-white/5 backdrop-blur-2xl border border-gray-100 dark:border-white/10 rounded-[2.5rem] p-10 shadow-[0_50px_100px_rgba(0,0,0,0.1)] dark:shadow-[0_50px_100px_rgba(0,0,0,0.4)] overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-600"></div>
-                    
+
                     <div className="flex flex-col items-center mb-10">
                         <div className="w-24 h-24 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/30 mb-6 transform hover:rotate-6 transition-all duration-500 group animate-float">
                             <svg className="w-12 h-12 text-white drop-shadow-lg" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -67,9 +66,9 @@ const Login = ({ setIsLoggedIn, onSwitchToRegister }) => {
                         </div>
                         <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight mb-2">تسجيل الدخول</h1>
                         <div className="flex items-center gap-2">
-                             <span className="w-8 h-px bg-slate-200 dark:bg-slate-700"></span>
-                             <p className="text-slate-500 dark:text-slate-400 font-bold text-sm">لوحة تحكم شركة المياه</p>
-                             <span className="w-8 h-px bg-slate-200 dark:bg-slate-700"></span>
+                            <span className="w-8 h-px bg-slate-200 dark:bg-slate-700"></span>
+                            <p className="text-slate-500 dark:text-slate-400 font-bold text-sm">لوحة تحكم شركة المياه</p>
+                            <span className="w-8 h-px bg-slate-200 dark:bg-slate-700"></span>
                         </div>
                     </div>
 
@@ -145,18 +144,7 @@ const Login = ({ setIsLoggedIn, onSwitchToRegister }) => {
                         </button>
                     </form>
 
-                    <div className="mt-8 pt-6 border-t border-white/5 text-center">
-                        <p className="text-slate-400 text-sm font-bold">
-                            ليس لديك حساب؟{' '}
-                            <button 
-                                type="button"
-                                onClick={onSwitchToRegister}
-                                className="text-cyan-400 hover:text-cyan-300 transition-colors underline decoration-cyan-400/30 underline-offset-4 font-bold"
-                            >
-                                إنشاء حساب جديد
-                            </button>
-                        </p>
-                    </div>
+
 
                     <div className="mt-8 pt-8 border-t border-white/5 flex flex-col items-center gap-4">
                         <p className="text-slate-500 text-xs font-bold">نظام محمي وآمن © {new Date().getFullYear()}</p>
@@ -168,24 +156,7 @@ const Login = ({ setIsLoggedIn, onSwitchToRegister }) => {
                 </div>
             </div>
 
-            <style dangerouslySetInnerHTML={{ __html: `
-                @keyframes shake {
-                    0%, 100% { transform: translateX(0); }
-                    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-                    20%, 40% , 60%, 80% { transform: translateX(4px); }
-                }
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
-                }
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                .animate-shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
-                .animate-float { animation: float 6s ease-in-out infinite; }
-                .animate-in { animation: fadeIn 0.8s ease-out forwards; }
-            `}} />
+            {/* Animations moved to index.css for better performance */}
         </div>
     );
 };

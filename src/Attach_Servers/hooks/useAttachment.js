@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { handleDelete as deleteLogic } from '../DeleteAttachmentModel';
 
 export const useAttachment = () => {
+
     const [attachments, setAttachments] = useState([]);
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -14,8 +15,8 @@ export const useAttachment = () => {
 
     // Data States
     const [selectedAttachment, setSelectedAttachment] = useState(null);
-    const [editForm, setEditForm] = useState({ client_id: '', file: null, status: 'pending' });
-    const [addForm, setAddForm] = useState({ client_id: '', images: null, pdfs: null, status: 'pending' });
+    const [editForm, setEditForm] = useState({ client_id: '', file: null});
+    const [addForm, setAddForm] = useState({ client_id: '', images: null, pdfs: null});
 
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 
@@ -25,32 +26,45 @@ export const useAttachment = () => {
 
     const fetchAllData = async () => {
         setLoading(true);
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+        };
         try {
-            // Fetch both attachments and clients to match IDs with names
             const [attachRes, clientRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/attachments`),
-                fetch(`${API_BASE_URL}/clients`)
+                fetch(`${API_BASE_URL}/attachments`, { headers }),
+                fetch(`${API_BASE_URL}/clients`, { headers })
             ]);
             
             const attachData = await attachRes.json();
             const clientData = await clientRes.json();
             
-            setAttachments(attachData);
-            setClients(clientData);
+            setAttachments(Array.isArray(attachData) ? attachData : []);
+            setClients(Array.isArray(clientData) ? clientData : []);
         } catch (error) {
             console.error("Error fetching initial data:", error);
+            setAttachments([]);
+            setClients([]);
         } finally {
             setLoading(false);
         }
     };
 
     const fetchAttachments = async () => {
+        const token = localStorage.getItem('token');
         try {
-            const res = await fetch(`${API_BASE_URL}/attachments`);
+            const res = await fetch(`${API_BASE_URL}/attachments`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
             const data = await res.json();
-            setAttachments(data);
+            setAttachments(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Error fetching attachments:", error);
+            setAttachments([]);
         }
     };
 
@@ -82,7 +96,6 @@ export const useAttachment = () => {
         setEditForm({
             client_id: attachment.client_id || '',
             file: attachment.file_path || null,
-            status: attachment.status || 'pending'
         });
         setShowEditModal(true);
     };
@@ -92,16 +105,52 @@ export const useAttachment = () => {
         setShowViewModal(true);
     };
 
-    const filteredAttachments = attachments.filter(attachment => {
-        const client = clients.find(c => c.id === attachment.client_id);
+
+    // Create a lookup map for clients to improve O(1) performance in filter/grouping
+    const clientMap = useMemo(() => {
+        const map = {};
+        clients.forEach(c => { map[c.id] = c; });
+        return map;
+    }, [clients]);
+
+    // Use memoized filtered attachments to avoid re-calculating on every render
+    const filteredAttachments = useMemo(() => {
         const searchText = searchTerm.toLowerCase();
-        
-        return (
-            (client && client.name.toLowerCase().includes(searchText)) ||
-            (attachment.status && attachment.status.toLowerCase().includes(searchText)) ||
-            (attachment.file_path && attachment.file_path.toLowerCase().includes(searchText))
-        );
-    });
+        if (!searchText) return attachments;
+
+        return attachments.filter(attachment => {
+            const client = clientMap[attachment.client_id];
+            return (
+                (client && client.name.toLowerCase().includes(searchText)) ||
+                (attachment.status && attachment.status.toLowerCase().includes(searchText)) ||
+                (attachment.file_path && attachment.file_path.toLowerCase().includes(searchText))
+            );
+        });
+    }, [attachments, clientMap, searchTerm]);
+
+    // Grouping logic for the UI, memoized to prevent expensive recalculation
+    const groupedAttachments = useMemo(() => {
+        const groups = {};
+        filteredAttachments.forEach(attachment => {
+            const clientId = attachment.client_id;
+            if (!groups[clientId]) {
+                groups[clientId] = {
+                    client_id: clientId,
+                    client: attachment.client || clientMap[clientId],
+                    images: [],
+                    pdfs: [],
+                    total: 0
+                };
+            }
+            if (attachment.type === 'personal_image' || !attachment.file_path?.toLowerCase().endsWith('.pdf')) {
+                groups[clientId].images.push(attachment);
+            } else {
+                groups[clientId].pdfs.push(attachment);
+            }
+            groups[clientId].total++;
+        });
+        return Object.values(groups);
+    }, [filteredAttachments, clientMap]);
 
     return {
         attachments,
@@ -125,6 +174,7 @@ export const useAttachment = () => {
         handleEdit,
         handleView,
         fetchAttachments,
-        filteredAttachments
+        filteredAttachments,
+        groupedAttachments
     };
 };

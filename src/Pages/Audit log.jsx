@@ -15,17 +15,25 @@ const AuditLog = () => {
 
     const fetchLogs = async () => {
         setLoading(true);
+        const token = localStorage.getItem('token');
         try {
-            const res = await fetch(`${API_BASE_URL}/activities`);
+            const res = await fetch(`${API_BASE_URL}/activities`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
             if (res.ok) {
                 const data = await res.json();
-                setLogs(data);
+                setLogs(Array.isArray(data) ? data : []);
             } else {
                 toast.error("فشل في مزامنة السجلات مع الخادم");
+                setLogs([]);
             }
         } catch (error) {
             console.error("Error fetching audit logs:", error);
             toast.error("حدث خطأ في الاتصال بالنظام");
+            setLogs([]);
         } finally {
             setLoading(false);
         }
@@ -52,16 +60,7 @@ const AuditLog = () => {
 
     return (
         <div className="p-4 md:p-8 bg-transparent min-h-screen font-sans selection:bg-indigo-100 selection:text-indigo-900" dir="rtl">
-            <style>{`
-                @keyframes slideUp {
-                    from { opacity: 0; transform: translateY(20px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                .audit-card {
-                    animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-                    opacity: 0;
-                }
-            `}</style>
+            {/* Animations moved to index.css for better performance */}
 
             <header className="mb-12 relative">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 relative z-10">

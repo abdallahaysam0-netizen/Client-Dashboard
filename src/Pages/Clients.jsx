@@ -27,6 +27,12 @@ const Clients = () => {
         filteredClients
     } = useClients();
 
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const permissions = user.permissions || [];
+    const roles = user.roles || [];
+
+    const hasPermission = (permission) => permissions.includes(permission) || roles.includes('Admin');
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-transparent">
@@ -52,13 +58,15 @@ const Clients = () => {
                         <h1 className="text-4xl font-black text-gray-900 dark:text-slate-100 tracking-tight">قاعدة بيانات العملاء</h1>
                         <p className="text-gray-500 dark:text-slate-500 font-medium">إدارة شاملة وتتبع دقيق لبيانات العملاء في منصتك.</p>
                     </div>
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="flex items-center justify-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-2xl shadow-indigo-200 dark:shadow-indigo-900/20 hover:bg-indigo-700 hover:-translate-y-1 transition-all active:scale-95 group"
-                    >
-                        <span className="text-2xl group-hover:rotate-180 transition-transform duration-700">+</span>
-                        إضافة عميل جديد
-                    </button>
+                    {hasPermission('create-clients') && (
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="flex items-center justify-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-2xl shadow-indigo-200 dark:shadow-indigo-900/20 hover:bg-indigo-700 hover:-translate-y-1 transition-all active:scale-95 group"
+                        >
+                            <span className="text-2xl group-hover:rotate-180 transition-transform duration-700">+</span>
+                            إضافة عميل جديد
+                        </button>
+                    )}
                 </header>
 
                 {/* Filter Bar */}
@@ -131,20 +139,24 @@ const Clients = () => {
                                                 >
                                                     <span className="text-xl">👁️</span>
                                                 </button>
-                                                <button
-                                                    onClick={() => handleEdit(client)}
-                                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-slate-800 text-amber-600 dark:text-amber-400 hover:bg-amber-600 hover:text-white hover:scale-110 shadow-sm transition-all"
-                                                    title="تعديل الحساب"
-                                                >
-                                                    <span className="text-lg">✏️</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(client.id)}
-                                                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-slate-800 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:scale-110 shadow-sm transition-all"
-                                                    title="حذف نهائي"
-                                                >
-                                                    <span className="text-lg">🗑️</span>
-                                                </button>
+                                                {hasPermission('edit-clients') && (
+                                                    <button
+                                                        onClick={() => handleEdit(client)}
+                                                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-slate-800 text-amber-600 dark:text-amber-400 hover:bg-amber-600 hover:text-white hover:scale-110 shadow-sm transition-all"
+                                                        title="تعديل الحساب"
+                                                    >
+                                                        <span className="text-lg">✏️</span>
+                                                    </button>
+                                                )}
+                                                {hasPermission('delete-clients') && (
+                                                    <button
+                                                        onClick={() => handleDelete(client.id)}
+                                                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-slate-800 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white hover:scale-110 shadow-sm transition-all"
+                                                        title="حذف نهائي"
+                                                    >
+                                                        <span className="text-lg">🗑️</span>
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
