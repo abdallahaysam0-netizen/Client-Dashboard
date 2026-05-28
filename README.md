@@ -7,7 +7,8 @@ A modern, high-performance dashboard for managing clients, servers, and attachme
 - **Real-time Updates**: Integrated with Laravel Echo and Reverb for instant data synchronization.
 - **Client Management**: Full CRUD operations for managing client data.
 - **Server Monitoring**: Track and manage server attachments and statuses.
-- **Modern UI/UX**: Built with Tailwind CSS for a responsive, dark-mode-ready, and sleek interface.
+- **Dual Theme Support**: Full support for Dark and Light modes with persistent user preference.
+- **Modern UI/UX**: Responsive design built with Tailwind CSS, featuring smooth transitions and RTL support
 - **Secure Architecture**: Environment-based configuration and protected routing.
 - **Modular Codebase**: Organized using hooks and reusable components for maximum maintainability.
 
